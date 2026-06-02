@@ -1,0 +1,34 @@
+# Environment and secrets
+.env
+admin-ui/.env
+*.local
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+
+# Node (admin UI)
+admin-ui/node_modules/
+admin-ui/dist/
+
+# Accidental npm at repo root (no package.json)
+/package-lock.json
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
