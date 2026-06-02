@@ -5,9 +5,9 @@ providers = ["python"]
 [variables]
 NIXPACKS_PYTHON_VERSION = "3.12"
 
-# Node only for building admin-ui (package.json is in admin-ui/, not repo root)
+# Python interpreter for provider install + Node for admin-ui build
 [phases.setup]
-nixPkgs = ["nodejs_20"]
+nixPkgs = ["python312", "nodejs_20"]
 
 [phases.build]
 cmds = [
