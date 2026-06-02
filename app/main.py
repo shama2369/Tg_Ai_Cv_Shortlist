@@ -1,5 +1,10 @@
-from fastapi import FastAPI
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+import os
 import warnings
 import logging
 
@@ -23,6 +28,13 @@ from app.db.mongo import get_db
 
 app = FastAPI(title="AI CV Shortlisting API", version="1.0.0")
 
+FRONTEND_DIST = Path(__file__).resolve().parent.parent / "admin-ui" / "dist"
+
+
+def _frontend_available() -> bool:
+    return (FRONTEND_DIST / "index.html").is_file()
+
+
 # Initialize MongoDB indexes on startup
 @app.on_event("startup")
 def startup_event():
@@ -33,11 +45,26 @@ def startup_event():
             create_indexes()
         except Exception as e:
             logging.warning(f"Failed to create MongoDB indexes on startup: {e}")
+    if _frontend_available():
+        logging.info("Serving admin UI from %s", FRONTEND_DIST)
+    else:
+        logging.info(
+            "admin-ui/dist not found — API only. "
+            "Build UI: cd admin-ui && npm ci && npm run build"
+        )
 
-# Add CORS middleware for admin UI
+
+# CORS: Vite dev server; optional CORS_ORIGINS for split hosting
+_cors_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+if _extra := os.getenv("CORS_ORIGINS", "").strip():
+    _cors_origins.extend(o.strip() for o in _extra.split(",") if o.strip())
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -50,6 +77,31 @@ app.include_router(parse_router)
 app.include_router(score_router)
 app.include_router(candidates_router)
 
-@app.get("/")
-def root():
-    return {"message": "AI CV Shortlisting API running"}
+
+def _register_frontend() -> None:
+    """Serve Vite production build (single-URL Railway deploy)."""
+    assets_dir = FRONTEND_DIST / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="frontend-assets")
+
+    @app.get("/")
+    async def serve_index():
+        return FileResponse(FRONTEND_DIST / "index.html")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        if ".." in Path(full_path).parts:
+            raise HTTPException(status_code=404, detail="Not Found")
+        file_path = FRONTEND_DIST / full_path
+        if file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(FRONTEND_DIST / "index.html")
+
+
+if _frontend_available():
+    _register_frontend()
+else:
+
+    @app.get("/")
+    def root():
+        return {"message": "AI CV Shortlisting API running"}

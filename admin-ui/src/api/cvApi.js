@@ -1,7 +1,13 @@
 import axios from "axios";
 
-// If your FastAPI runs on 127.0.0.1:8000
-export const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000";
+// Local dev: VITE_API_BASE=http://127.0.0.1:8000 in admin-ui/.env
+// Railway (same URL): build with empty VITE_API_BASE → same-origin API calls
+export const API_BASE =
+  import.meta.env.VITE_API_BASE !== undefined
+    ? import.meta.env.VITE_API_BASE
+    : import.meta.env.PROD
+      ? ""
+      : "http://127.0.0.1:8000";
 
 export const api = axios.create({
   baseURL: API_BASE,
