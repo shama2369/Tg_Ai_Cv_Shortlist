@@ -1,10 +1,16 @@
-# Railway: build React UI + Python API (one service, one URL)
-[phases.setup]
-nixPkgs = ["python312", "nodejs_20"]
+# Railway: one service — Python API + Vite admin UI (one URL)
+# Use the Python provider so pip/venv are set up automatically (do not override install).
+providers = ["python"]
 
-[phases.install]
+[variables]
+NIXPACKS_PYTHON_VERSION = "3.12"
+
+# Node only for building admin-ui (package.json is in admin-ui/, not repo root)
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.build]
 cmds = [
-  "python -m pip install -r requirements.txt",
   "cd admin-ui && npm ci && VITE_API_BASE= npm run build",
 ]
 
